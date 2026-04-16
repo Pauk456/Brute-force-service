@@ -7,16 +7,32 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - Manager__WorkerCount=1
-      - Manager__WorkerBaseUrl=http://worker:8080
       - Manager__RequestTimeoutSeconds=120
     depends_on:
-      - worker
+      - worker1
+      - worker2
+      - worker3
 
-  worker:
+  worker1:
     build:
       context: .
       dockerfile: Worker/Dockerfile
-    container_name: crackhash-worker
+    container_name: crackhash-worker1
+    environment:
+      - Worker__ManagerCallbackUrl=http://manager:8080/internal/api/manager/hash/crack/request
+
+  worker2:
+    build:
+      context: .
+      dockerfile: Worker/Dockerfile
+    container_name: crackhash-worker2
+    environment:
+      - Worker__ManagerCallbackUrl=http://manager:8080/internal/api/manager/hash/crack/request
+
+  worker3:
+    build:
+      context: .
+      dockerfile: Worker/Dockerfile
+    container_name: crackhash-worker3
     environment:
       - Worker__ManagerCallbackUrl=http://manager:8080/internal/api/manager/hash/crack/request

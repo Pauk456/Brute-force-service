@@ -27,10 +27,11 @@ public sealed class HashCrackService
     public Task<StartCrackResponseDto> StartCrackAsync(StartCrackRequestDto request, CancellationToken cancellationToken)
     {
         var requestId = Guid.NewGuid();
-        var state = new CrackRequestState(requestId, DateTime.UtcNow, _options.WorkerCount);
+        var workerCount = _options.WorkerBaseUrls.Length;
+        var state = new CrackRequestState(requestId, DateTime.UtcNow, workerCount);
         _repository.Add(state);
 
-        var workerTasks = Enumerable.Range(0, _options.WorkerCount)
+        var workerTasks = Enumerable.Range(0, workerCount)
             .Select(partNumber => DispatchTaskToWorkerAsync(
                 new WorkerCrackTaskRequest
                 {
@@ -39,7 +40,7 @@ public sealed class HashCrackService
                     Alphabet = _options.Alphabet,
                     MaxLength = request.MaxLength,
                     PartNumber = partNumber,
-                    PartCount = _options.WorkerCount
+                    PartCount = workerCount
                 },
                 cancellationToken));
 
@@ -94,7 +95,10 @@ public sealed class HashCrackService
     private async Task DispatchTaskToWorkerAsync(WorkerCrackTaskRequest request, CancellationToken cancellationToken)
     {
         var client = _httpClientFactory.CreateClient();
-        var endpoint = $"{_options.WorkerBaseUrl}/internal/api/worker/hash/crack/task";
+
+        var baseUrl = _options.WorkerBaseUrls[Math.Abs(request.PartNumber) % _options.WorkerBaseUrls.Length];
+        var endpoint = new Uri(new Uri(baseUrl), "/internal/api/worker/hash/crack/task");
+
         await client.PostAsJsonAsync(endpoint, request, cancellationToken);
         Console.WriteLine($"[INFO] Sent request to URL: {endpoint} with request: {System.Text.Json.JsonSerializer.Serialize(request)}");
     }
