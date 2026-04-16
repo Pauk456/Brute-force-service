@@ -96,5 +96,6 @@ public sealed class HashCrackService
         var client = _httpClientFactory.CreateClient();
         var endpoint = $"{_options.WorkerBaseUrl}/internal/api/worker/hash/crack/task";
         await client.PostAsJsonAsync(endpoint, request, cancellationToken);
+        Console.WriteLine($"[INFO] Sent request to URL: {endpoint} with request: {System.Text.Json.JsonSerializer.Serialize(request)}");
     }
 }
