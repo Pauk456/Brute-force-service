@@ -36,3 +36,12 @@ services:
     container_name: crackhash-worker3
     environment:
       - Worker__ManagerCallbackUrl=http://manager:8080/internal/api/manager/hash/crack/request
+
+  worker4:
+    build:
+      context: .
+      dockerfile: Worker/Dockerfile
+    container_name: crackhash-worker4
+    environment:
+      - Worker__ManagerCallbackUrl=http://manager:8080/internal/api/manager/hash/crack/request
+
