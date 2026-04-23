@@ -33,4 +33,15 @@ public sealed class InMemoryCrackRequestRepository
     {
         _completedHashes.TryAdd(hash, resultWords);
     }
+
+    public IReadOnlyCollection<CrackRequestState> GetInProgressSnapshot() =>
+        _requests.Values
+            .Where(static x => x.Status == Domain.Enums.RequestStatus.InProgress)
+            .ToArray();
+
+    public IReadOnlyDictionary<string, IReadOnlyCollection<string>> GetCompletedHashesSnapshot() =>
+        _completedHashes.ToDictionary(
+            static x => x.Key,
+            static x => x.Value,
+            StringComparer.OrdinalIgnoreCase);
 }
