@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CrackHash UI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 24px auto;
+      padding: 0 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    td {
+      border: 1px solid #9aa5b1;
+      padding: 10px;
+      vertical-align: middle;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .section-title {
+      font-size: 30px;
+      font-weight: 700;
+      margin: 0 0 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="section-title">CrackHash</h1>
+
+  <table>
+    <tr>
+      <td>Хэш для взлома</td>
+      <td><input id="hashInput" type="text" placeholder="Хэш"></td>
+      <td><input id="maxLengthInput" type="number" min="1" placeholder="Длина"></td>
+      <td><button id="startButton" type="button">Отправить</button></td>
+    </tr>
+    <tr>
+      <td>Статус</td>
+      <td id="startStatus" colspan="3">-</td>
+    </tr>
+    <tr>
+      <td>Результат взлома</td>
+      <td><input id="requestIdInput" type="text" placeholder="id"></td>
+      <td></td>
+      <td><button id="statusButton" type="button">Отправить</button></td>
+    </tr>
+    <tr>
+      <td>Статус</td>
+      <td id="resultStatus" colspan="3">-</td>
+    </tr>
+  </table>
+
+  <script>
+    const hashInput = document.getElementById("hashInput");
+    const maxLengthInput = document.getElementById("maxLengthInput");
+    const startButton = document.getElementById("startButton");
+    const startStatus = document.getElementById("startStatus");
+    const requestIdInput = document.getElementById("requestIdInput");
+    const statusButton = document.getElementById("statusButton");
+    const resultStatus = document.getElementById("resultStatus");
+
+    async function startCrack() {
+      const hash = hashInput.value.trim();
+      const maxLength = Number(maxLengthInput.value);
+
+      if (!hash || !Number.isInteger(maxLength) || maxLength <= 0) {
+        startStatus.textContent = "Введите корректные hash и длину.";
+        return;
+      }
+
+      startStatus.textContent = "Отправка...";
+
+      try {
+        const response = await fetch("/api/hash/crack", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hash, maxLength })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          startStatus.textContent = `Ошибка: ${response.status} ${errorText}`;
+          return;
+        }
+
+        const data = await response.json();
+        requestIdInput.value = data.requestId ?? "";
+        startStatus.textContent = `Задача создана. requestId: ${data.requestId}`;
+      } catch (error) {
+        startStatus.textContent = `Ошибка сети: ${error}`;
+      }
+    }
+
+    async function getStatus() {
+      const requestId = requestIdInput.value.trim();
+      if (!requestId) {
+        resultStatus.textContent = "Введите requestId.";
+        return;
+      }
+
+      resultStatus.textContent = "Запрос статуса...";
+
+      try {
+        const response = await fetch(`/api/hash/status?requestId=${encodeURIComponent(requestId)}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          resultStatus.textContent = `Ошибка: ${response.status} ${errorText}`;
+          return;
+        }
+
+        const data = await response.json();
+        const words = Array.isArray(data.data) ? data.data.join(", ") : "-";
+        resultStatus.textContent = `status=${data.status}; data=${words}`;
+      } catch (error) {
+        resultStatus.textContent = `Ошибка сети: ${error}`;
+      }
+    }
+
+    startButton.addEventListener("click", startCrack);
+    statusButton.addEventListener("click", getStatus);
+  </script>
+</body>
+</html>
