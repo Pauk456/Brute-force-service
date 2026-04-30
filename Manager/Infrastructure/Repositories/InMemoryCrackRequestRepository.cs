@@ -9,6 +9,7 @@ public sealed class InMemoryCrackRequestRepository
 {
     private readonly ConcurrentDictionary<Guid, CrackRequestState> _requests = new();
     private readonly ConcurrentDictionary<string, IReadOnlyCollection<string>> _completedHashes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, Guid> _completedHashRequestIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentQueue<string> _completedHashInsertionOrder = new();
     private readonly int _maxCompletedHashCacheEntries;
 
@@ -37,10 +38,26 @@ public sealed class InMemoryCrackRequestRepository
         return state is not null;
     }
 
-    public bool TryGetCompletedHash(string hash, out IReadOnlyCollection<string>? resultWords) =>
-        _completedHashes.TryGetValue(hash, out resultWords);
+    public bool TryGetCompletedHash(string hash, out Guid requestId, out IReadOnlyCollection<string>? resultWords)
+    {
+        requestId = Guid.Empty;
+        resultWords = null;
 
-    public void TryStoreCompletedHash(string hash, IReadOnlyCollection<string> resultWords)
+        if (!_completedHashes.TryGetValue(hash, out resultWords))
+        {
+            return false;
+        }
+
+        if (!_completedHashRequestIds.TryGetValue(hash, out requestId))
+        {
+            resultWords = null;
+            return false;
+        }
+
+        return true;
+    }
+
+    public void TryStoreCompletedHash(string hash, Guid requestId, IReadOnlyCollection<string> resultWords)
     {
         if (_maxCompletedHashCacheEntries <= 0)
         {
@@ -49,6 +66,7 @@ public sealed class InMemoryCrackRequestRepository
 
         if (_completedHashes.TryAdd(hash, resultWords))
         {
+            _completedHashRequestIds[hash] = requestId;
             _completedHashInsertionOrder.Enqueue(hash);
             TrimCompletedHashCache();
         }
@@ -60,6 +78,7 @@ public sealed class InMemoryCrackRequestRepository
                _completedHashInsertionOrder.TryDequeue(out var oldestHash))
         {
             _completedHashes.TryRemove(oldestHash, out _);
+            _completedHashRequestIds.TryRemove(oldestHash, out _);
         }
     }
 

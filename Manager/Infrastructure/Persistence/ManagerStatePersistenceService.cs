@@ -31,8 +31,6 @@ public sealed class ManagerStatePersistenceService
                 Hash = request.Hash,
                 Status = request.Status.ToString(),
                 CreatedAtUtc = request.CreatedAtUtc,
-                ExpectedParts = request.ExpectedParts,
-                IsQueued = request.IsQueued,
                 CompletedParts = request.CompletedParts.ToDictionary(
                     static x => x.Key,
                     static x => x.Value.ToArray())
@@ -75,8 +73,6 @@ public sealed class ManagerStatePersistenceService
         public required string Hash { get; init; }
         public required string Status { get; init; }
         public DateTime CreatedAtUtc { get; init; }
-        public int ExpectedParts { get; init; }
-        public bool IsQueued { get; init; }
         public required Dictionary<int, string[]> CompletedParts { get; init; }
     }
 }

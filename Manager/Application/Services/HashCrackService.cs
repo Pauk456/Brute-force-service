@@ -42,12 +42,15 @@ public sealed class HashCrackService
             return Task.FromResult<CrackResponseDto?>(new CrackResponseDto { RequestId = inProgressState.RequestId.ToString() });
         }
 
-        if (_repository.TryGetCompletedHash(normalizedHash, out var cachedWords) && cachedWords is not null)
+        if (_repository.TryGetCompletedHash(normalizedHash, out var cachedRequestId, out var cachedWords) && cachedWords is not null)
         {
-            var cachedRequestId = Guid.NewGuid();
-            var cachedState = new CrackRequestState(cachedRequestId, normalizedHash, DateTime.UtcNow);
-            cachedState.TrySetReadyFromCache(cachedWords);
-            _repository.Add(cachedState);
+            if (!_repository.TryGet(cachedRequestId, out _))
+            {
+                var cachedState = new CrackRequestState(cachedRequestId, normalizedHash, DateTime.UtcNow);
+                cachedState.TrySetReadyFromCache(cachedWords);
+                _repository.Add(cachedState);
+            }
+
             return Task.FromResult<CrackResponseDto?>(new CrackResponseDto { RequestId = cachedRequestId.ToString() });
         }
 
@@ -107,7 +110,7 @@ public sealed class HashCrackService
         var accepted = state.TryAddPartResult(result.PartNumber, result.Words);
         if (accepted && state.Status == Domain.Enums.RequestStatus.Ready && state.ResultWords is not null)
         {
-            _repository.TryStoreCompletedHash(state.Hash, state.ResultWords);
+            _repository.TryStoreCompletedHash(state.Hash, state.RequestId, state.ResultWords);
         }
 
         return accepted;
