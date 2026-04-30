@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using Manager.Domain.Entities;
+using Manager.Infrastructure.Options;
+using Microsoft.Extensions.Options;
 
 namespace Manager.Infrastructure.Repositories;
 
@@ -7,12 +9,21 @@ public sealed class InMemoryCrackRequestRepository
 {
     private readonly ConcurrentDictionary<Guid, CrackRequestState> _requests = new();
     private readonly ConcurrentDictionary<string, IReadOnlyCollection<string>> _completedHashes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentQueue<string> _completedHashInsertionOrder = new();
+    private readonly int _maxCompletedHashCacheEntries;
+
+    public InMemoryCrackRequestRepository(IOptions<ManagerOptions> options)
+    {
+        _maxCompletedHashCacheEntries = Math.Max(0, options.Value.MaxCompletedHashCacheEntries);
+    }
 
     public CrackRequestState Add(CrackRequestState state)
     {
         _requests[state.RequestId] = state;
         return state;
     }
+
+    public bool TryRemove(Guid requestId) => _requests.TryRemove(requestId, out _);
 
     public bool TryGet(Guid requestId, out CrackRequestState? state) => _requests.TryGetValue(requestId, out state);
 
@@ -31,7 +42,25 @@ public sealed class InMemoryCrackRequestRepository
 
     public void TryStoreCompletedHash(string hash, IReadOnlyCollection<string> resultWords)
     {
-        _completedHashes.TryAdd(hash, resultWords);
+        if (_maxCompletedHashCacheEntries <= 0)
+        {
+            return;
+        }
+
+        if (_completedHashes.TryAdd(hash, resultWords))
+        {
+            _completedHashInsertionOrder.Enqueue(hash);
+            TrimCompletedHashCache();
+        }
+    }
+
+    private void TrimCompletedHashCache()
+    {
+        while (_completedHashes.Count > _maxCompletedHashCacheEntries &&
+               _completedHashInsertionOrder.TryDequeue(out var oldestHash))
+        {
+            _completedHashes.TryRemove(oldestHash, out _);
+        }
     }
 
     public IReadOnlyCollection<CrackRequestState> GetInProgressSnapshot() =>

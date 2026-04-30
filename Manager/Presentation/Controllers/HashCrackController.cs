@@ -24,6 +24,11 @@ public sealed class HashCrackController : ControllerBase
         }
 
         var response = await _service.StartCrackAsync(request, cancellationToken);
+        if (response is null)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, "crack task queue is full.");
+        }
+
         return Ok(response);
     }
 

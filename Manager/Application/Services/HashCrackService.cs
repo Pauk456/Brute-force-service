@@ -33,13 +33,13 @@ public sealed class HashCrackService
         _logger = logger;
     }
 
-    public async Task<CrackResponseDto> StartCrackAsync(CrackRequestDto request, CancellationToken cancellationToken)
+    public Task<CrackResponseDto?> StartCrackAsync(CrackRequestDto request, CancellationToken cancellationToken)
     {
         var normalizedHash = request.Hash.ToLowerInvariant();
 
         if (_repository.TryGetInProgressByHash(normalizedHash, out var inProgressState) && inProgressState is not null)
         {
-            return new CrackResponseDto { RequestId = inProgressState.RequestId.ToString() };
+            return Task.FromResult<CrackResponseDto?>(new CrackResponseDto { RequestId = inProgressState.RequestId.ToString() });
         }
 
         if (_repository.TryGetCompletedHash(normalizedHash, out var cachedWords) && cachedWords is not null)
@@ -48,22 +48,26 @@ public sealed class HashCrackService
             var cachedState = new CrackRequestState(cachedRequestId, normalizedHash, DateTime.UtcNow);
             cachedState.TrySetReadyFromCache(cachedWords);
             _repository.Add(cachedState);
-            return new CrackResponseDto { RequestId = cachedRequestId.ToString() };
+            return Task.FromResult<CrackResponseDto?>(new CrackResponseDto { RequestId = cachedRequestId.ToString() });
         }
 
         var requestId = Guid.NewGuid();
         var state = new CrackRequestState(requestId, normalizedHash, DateTime.UtcNow);
         _repository.Add(state);
-        await _queue.Writer.WriteAsync(
-            new CrackJobQueueItem
-            {
-                RequestId = requestId,
-                Hash = normalizedHash,
-                MaxLength = request.MaxLength
-            },
-            cancellationToken);
+        var queued = _queue.Writer.TryWrite(new CrackJobQueueItem
+        {
+            RequestId = requestId,
+            Hash = normalizedHash,
+            MaxLength = request.MaxLength
+        });
 
-        return new CrackResponseDto { RequestId = requestId.ToString() };
+        if (!queued)
+        {
+            _repository.TryRemove(requestId);
+            return Task.FromResult<CrackResponseDto?>(null);
+        }
+
+        return Task.FromResult<CrackResponseDto?>(new CrackResponseDto { RequestId = requestId.ToString() });
     }
 
     public CrackStatusResponseDto? GetStatus(Guid requestId)
