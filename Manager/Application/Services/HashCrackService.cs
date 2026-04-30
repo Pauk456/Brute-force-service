@@ -82,10 +82,13 @@ public sealed class HashCrackService
             Status = state.Status switch
             {
                 Domain.Enums.RequestStatus.InProgress => "IN_PROGRESS",
+                Domain.Enums.RequestStatus.PartialReady => "PARTIAL_READY",
                 Domain.Enums.RequestStatus.Ready => "READY",
                 _ => "ERROR"
             },
-            Data = state.Status == Domain.Enums.RequestStatus.Ready ? state.ResultWords : null
+            Data = state.Status is Domain.Enums.RequestStatus.PartialReady or Domain.Enums.RequestStatus.Ready
+                ? state.ResultWords
+                : null
         };
     }
 

@@ -32,7 +32,7 @@ public sealed class InMemoryCrackRequestRepository
     public bool TryGetInProgressByHash(string hash, out CrackRequestState? state)
     {
         state = _requests.Values.FirstOrDefault(x =>
-            x.Status == Domain.Enums.RequestStatus.InProgress &&
+            (x.Status == Domain.Enums.RequestStatus.InProgress || x.Status == Domain.Enums.RequestStatus.PartialReady) &&
             string.Equals(x.Hash, hash, StringComparison.OrdinalIgnoreCase));
         return state is not null;
     }
@@ -65,7 +65,7 @@ public sealed class InMemoryCrackRequestRepository
 
     public IReadOnlyCollection<CrackRequestState> GetInProgressSnapshot() =>
         _requests.Values
-            .Where(static x => x.Status == Domain.Enums.RequestStatus.InProgress)
+            .Where(static x => x.Status is Domain.Enums.RequestStatus.InProgress or Domain.Enums.RequestStatus.PartialReady)
             .ToArray();
 
     public IReadOnlyDictionary<string, IReadOnlyCollection<string>> GetCompletedHashesSnapshot() =>

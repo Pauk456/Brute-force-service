@@ -49,7 +49,7 @@ public sealed class CrackRequestState
 
     public bool TryAddPartResult(int partNumber, IReadOnlyCollection<string> words)
     {
-        if (Status != RequestStatus.InProgress || IsQueued || ExpectedParts <= 0)
+        if ((Status != RequestStatus.InProgress && Status != RequestStatus.PartialReady) || IsQueued || ExpectedParts <= 0)
         {
             return false;
         }
@@ -60,13 +60,14 @@ public sealed class CrackRequestState
             return false;
         }
 
+        ResultWords = CompletedParts.Values.SelectMany(static x => x).Distinct().ToArray();
+
         if (CompletedParts.Count < ExpectedParts)
         {
+            Status = RequestStatus.PartialReady;
             return true;
         }
 
-        var finalResult = CompletedParts.Values.SelectMany(static x => x).Distinct().ToArray();
-        ResultWords = finalResult;
         Status = RequestStatus.Ready;
         return true;
     }

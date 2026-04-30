@@ -29,6 +29,7 @@ public sealed class ManagerStatePersistenceService
             {
                 RequestId = request.RequestId,
                 Hash = request.Hash,
+                Status = request.Status.ToString(),
                 CreatedAtUtc = request.CreatedAtUtc,
                 ExpectedParts = request.ExpectedParts,
                 IsQueued = request.IsQueued,
@@ -72,6 +73,7 @@ public sealed class ManagerStatePersistenceService
     {
         public Guid RequestId { get; init; }
         public required string Hash { get; init; }
+        public required string Status { get; init; }
         public DateTime CreatedAtUtc { get; init; }
         public int ExpectedParts { get; init; }
         public bool IsQueued { get; init; }
