@@ -3,13 +3,25 @@ using Worker.Infrastructure.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.Configure<WorkerOptions>(builder.Configuration.GetSection(WorkerOptions.SectionName));
-builder.Services.AddControllers().AddXmlSerializerFormatters();
-builder.Services.AddSingleton<BruteForceCrackService>();
-builder.Services.AddHttpClient();
+ConfigureServices(builder.Services, builder.Configuration);
 
 var app = builder.Build();
 
-app.MapControllers();
+ConfigurePipeline(app);
 
 app.Run();
+
+return;
+
+static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+{
+    services.Configure<WorkerOptions>(configuration.GetSection(WorkerOptions.SectionName));
+    services.AddControllers().AddXmlSerializerFormatters();
+    services.AddSingleton<BruteForceCrackService>();
+    services.AddHttpClient();
+}
+
+static void ConfigurePipeline(WebApplication app)
+{
+    app.MapControllers();
+}

@@ -9,31 +9,43 @@ using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.Configure<ManagerOptions>(builder.Configuration.GetSection(ManagerOptions.SectionName));
-builder.Services.AddControllers().AddXmlSerializerFormatters();
-builder.Services.AddSingleton<InMemoryCrackRequestRepository>();
-builder.Services.AddSingleton<ManagerStatePersistenceService>();
-builder.Services.AddSingleton(sp =>
-{
-    var options = sp.GetRequiredService<IOptions<ManagerOptions>>().Value;
-    var queueCapacity = Math.Max(1, options.MaxQueuedCrackRequests);
-
-    return Channel.CreateBounded<CrackJobQueueItem>(new BoundedChannelOptions(queueCapacity)
-    {
-        FullMode = BoundedChannelFullMode.Wait,
-        SingleReader = true,
-        SingleWriter = false
-    });
-});
-builder.Services.AddSingleton<HashCrackService>();
-builder.Services.AddHostedService<CrackTaskQueueBackgroundService>();
-builder.Services.AddHostedService<RequestTimeoutBackgroundService>();
-builder.Services.AddHttpClient();
+ConfigureServices(builder.Services, builder.Configuration);
 
 var app = builder.Build();
 
-app.UseDefaultFiles();
-app.UseStaticFiles();
-app.MapControllers();
+ConfigurePipeline(app);
 
 app.Run();
+
+return;
+
+static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+{
+    services.Configure<ManagerOptions>(configuration.GetSection(ManagerOptions.SectionName));
+    services.AddControllers().AddXmlSerializerFormatters();
+    services.AddSingleton<InMemoryCrackRequestRepository>();
+    services.AddSingleton<ManagerStatePersistenceService>();
+    services.AddSingleton(sp =>
+    {
+        var options = sp.GetRequiredService<IOptions<ManagerOptions>>().Value;
+        var queueCapacity = Math.Max(1, options.MaxQueuedCrackRequests);
+
+        return Channel.CreateBounded<CrackJobQueueItem>(new BoundedChannelOptions(queueCapacity)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = false
+        });
+    });
+    services.AddSingleton<HashCrackService>();
+    services.AddHostedService<CrackTaskQueueBackgroundService>();
+    services.AddHostedService<RequestTimeoutBackgroundService>();
+    services.AddHttpClient();
+}
+
+static void ConfigurePipeline(WebApplication app)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+    app.MapControllers();
+}
