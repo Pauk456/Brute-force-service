@@ -1,6 +1,6 @@
 namespace Manager.Application.Models;
 
-public sealed class StartCrackResponseDto
+public sealed class CrackResponseDto
 {
     public required string RequestId { get; init; }
 }

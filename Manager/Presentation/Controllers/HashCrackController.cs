@@ -16,7 +16,7 @@ public sealed class HashCrackController : ControllerBase
     }
 
     [HttpPost("crack")]
-    public async Task<ActionResult<StartCrackResponseDto>> StartCrack([FromBody] CrackRequestDto request, CancellationToken cancellationToken)
+    public async Task<ActionResult<CrackResponseDto>> StartCrack([FromBody] CrackRequestDto request, CancellationToken cancellationToken)
     {
         if (request.MaxLength <= 0 || string.IsNullOrWhiteSpace(request.Hash))
         {

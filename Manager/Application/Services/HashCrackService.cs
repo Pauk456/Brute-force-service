@@ -33,13 +33,13 @@ public sealed class HashCrackService
         _logger = logger;
     }
 
-    public async Task<StartCrackResponseDto> StartCrackAsync(CrackRequestDto request, CancellationToken cancellationToken)
+    public async Task<CrackResponseDto> StartCrackAsync(CrackRequestDto request, CancellationToken cancellationToken)
     {
         var normalizedHash = request.Hash.ToLowerInvariant();
 
         if (_repository.TryGetInProgressByHash(normalizedHash, out var inProgressState) && inProgressState is not null)
         {
-            return new StartCrackResponseDto { RequestId = inProgressState.RequestId.ToString() };
+            return new CrackResponseDto { RequestId = inProgressState.RequestId.ToString() };
         }
 
         if (_repository.TryGetCompletedHash(normalizedHash, out var cachedWords) && cachedWords is not null)
@@ -48,7 +48,7 @@ public sealed class HashCrackService
             var cachedState = new CrackRequestState(cachedRequestId, normalizedHash, DateTime.UtcNow);
             cachedState.TrySetReadyFromCache(cachedWords);
             _repository.Add(cachedState);
-            return new StartCrackResponseDto { RequestId = cachedRequestId.ToString() };
+            return new CrackResponseDto { RequestId = cachedRequestId.ToString() };
         }
 
         var requestId = Guid.NewGuid();
@@ -63,7 +63,7 @@ public sealed class HashCrackService
             },
             cancellationToken);
 
-        return new StartCrackResponseDto { RequestId = requestId.ToString() };
+        return new CrackResponseDto { RequestId = requestId.ToString() };
     }
 
     public CrackStatusResponseDto? GetStatus(Guid requestId)
