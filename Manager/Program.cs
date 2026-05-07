@@ -7,45 +7,51 @@ using Manager.Infrastructure.Persistence;
 using Manager.Infrastructure.Repositories;
 using Microsoft.Extensions.Options;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace Manager;
 
-ConfigureServices(builder.Services, builder.Configuration);
-
-var app = builder.Build();
-
-ConfigurePipeline(app);
-
-app.Run();
-
-return;
-
-static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+public static class Program
 {
-    services.Configure<ManagerOptions>(configuration.GetSection(ManagerOptions.SectionName));
-    services.AddControllers().AddXmlSerializerFormatters();
-    services.AddSingleton<InMemoryCrackRequestRepository>();
-    services.AddSingleton<ManagerStatePersistenceService>();
-    services.AddSingleton(sp =>
+    public static void Main(string[] args)
     {
-        var options = sp.GetRequiredService<IOptions<ManagerOptions>>().Value;
-        var queueCapacity = Math.Max(1, options.MaxQueuedCrackRequests);
+        var builder = WebApplication.CreateBuilder(args);
 
-        return Channel.CreateBounded<CrackJobQueueItem>(new BoundedChannelOptions(queueCapacity)
+        ConfigureServices(builder.Services, builder.Configuration);
+
+        var app = builder.Build();
+
+        ConfigurePipeline(app);
+
+        app.Run();
+    }
+
+    private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<ManagerOptions>(configuration.GetSection(ManagerOptions.SectionName));
+        services.AddControllers().AddXmlSerializerFormatters();
+        services.AddSingleton<InMemoryCrackRequestRepository>();
+        services.AddSingleton<ManagerStatePersistenceService>();
+        services.AddSingleton(sp =>
         {
-            FullMode = BoundedChannelFullMode.Wait,
-            SingleReader = true,
-            SingleWriter = false
-        });
-    });
-    services.AddSingleton<HashCrackService>();
-    services.AddHostedService<CrackTaskQueueBackgroundService>();
-    services.AddHostedService<RequestTimeoutBackgroundService>();
-    services.AddHttpClient();
-}
+            var options = sp.GetRequiredService<IOptions<ManagerOptions>>().Value;
+            var queueCapacity = Math.Max(1, options.MaxQueuedCrackRequests);
 
-static void ConfigurePipeline(WebApplication app)
-{
-    app.UseDefaultFiles();
-    app.UseStaticFiles();
-    app.MapControllers();
+            return Channel.CreateBounded<CrackJobQueueItem>(new BoundedChannelOptions(queueCapacity)
+            {
+                FullMode = BoundedChannelFullMode.Wait,
+                SingleReader = true,
+                SingleWriter = false
+            });
+        });
+        services.AddSingleton<HashCrackService>();
+        services.AddHostedService<CrackTaskQueueBackgroundService>();
+        services.AddHostedService<RequestTimeoutBackgroundService>();
+        services.AddHttpClient();
+    }
+
+    private static void ConfigurePipeline(WebApplication app)
+    {
+        app.UseDefaultFiles();
+        app.UseStaticFiles();
+        app.MapControllers();
+    }
 }

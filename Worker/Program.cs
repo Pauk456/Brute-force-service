@@ -1,27 +1,33 @@
 using Worker.Application.Services;
 using Worker.Infrastructure.Options;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace Worker;
 
-ConfigureServices(builder.Services, builder.Configuration);
-
-var app = builder.Build();
-
-ConfigurePipeline(app);
-
-app.Run();
-
-return;
-
-static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+public static class Program
 {
-    services.Configure<WorkerOptions>(configuration.GetSection(WorkerOptions.SectionName));
-    services.AddControllers().AddXmlSerializerFormatters();
-    services.AddSingleton<BruteForceCrackService>();
-    services.AddHttpClient();
-}
+    public static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
 
-static void ConfigurePipeline(WebApplication app)
-{
-    app.MapControllers();
+        ConfigureServices(builder.Services, builder.Configuration);
+
+        var app = builder.Build();
+
+        ConfigurePipeline(app);
+
+        app.Run();
+    }
+
+    private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<WorkerOptions>(configuration.GetSection(WorkerOptions.SectionName));
+        services.AddControllers().AddXmlSerializerFormatters();
+        services.AddSingleton<BruteForceCrackService>();
+        services.AddHttpClient();
+    }
+
+    private static void ConfigurePipeline(WebApplication app)
+    {
+        app.MapControllers();
+    }
 }
